@@ -1,0 +1,771 @@
+
+Inventory scanner · HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Stock Scanner — Inventory System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+  :root {
+    --navy: #1F4E79;
+    --blue: #2E75B6;
+    --light: #BDD7EE;
+    --accent: #D6E4F0;
+    --green: #375623;
+    --lgreen: #E2EFDA;
+    --red: #C00000;
+    --lred: #FFE0E0;
+    --orange: #ED7D31;
+    --lorng: #FCE4D6;
+    --purp: #7030A0;
+    --lpurp: #EAD7F7;
+    --gray: #F5F5F5;
+    --dgray: #595959;
+    --white: #FFFFFF;
+    --border: #BFBFBF;
+  }
+ 
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #EAEEF3;
+    color: #222;
+    min-height: 100vh;
+  }
+ 
+  /* ── Header ── */
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  header .logo { font-size: 24px; }
+  header h1 { font-size: 16px; font-weight: 700; line-height: 1.2; }
+  header p  { font-size: 11px; opacity: 0.75; }
+  header .badge {
+    margin-left: auto;
+    background: var(--blue);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+ 
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    background: var(--navy);
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .tab.active {
+    color: white;
+    border-bottom-color: #FFD700;
+  }
+ 
+  /* ── Pages ── */
+  .page { display: none; padding: 16px; }
+  .page.active { display: block; }
+ 
+  /* ── Search bar ── */
+  .search-box {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    margin-bottom: 14px;
+  }
+  .search-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: var(--navy);
+    background: transparent;
+  }
+  .search-box input::placeholder { color: #aaa; }
+  .search-icon { font-size: 18px; color: var(--blue); }
+  .clear-btn {
+    background: var(--gray);
+    border: none;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--dgray);
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .clear-btn.visible { display: flex; }
+ 
+  /* ── Filter chips ── */
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .chip.all      { background: var(--navy); color: white; }
+  .chip.wr       { background: var(--accent); color: var(--navy); border-color: var(--blue); }
+  .chip.gp       { background: var(--lgreen); color: var(--green); border-color: var(--green); }
+  .chip.wb       { background: var(--lpurp); color: var(--purp); border-color: var(--purp); }
+  .chip.inactive { background: white; color: var(--dgray); border-color: var(--border); }
+ 
+  /* ── Results count ── */
+  .results-info {
+    font-size: 12px;
+    color: var(--dgray);
+    margin-bottom: 10px;
+    padding: 0 2px;
+  }
+ 
+  /* ── Item card ── */
+  .item-card {
+    background: white;
+    border-radius: 10px;
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    border-left: 4px solid var(--blue);
+  }
+  .item-card:active { transform: scale(0.98); }
+  .item-card.wr { border-left-color: var(--blue); }
+  .item-card.gp { border-left-color: var(--green); }
+  .item-card.wb { border-left-color: var(--purp); }
+ 
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .sku-badge {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--navy);
+    background: var(--accent);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+  }
+  .stock-pill {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .stock-pill.ok    { background: var(--lgreen); color: var(--green); }
+  .stock-pill.low   { background: var(--lorng);  color: var(--orange); }
+  .stock-pill.empty { background: var(--lred);   color: var(--red); }
+ 
+  .card-desc {
+    font-size: 13px;
+    color: #333;
+    line-height: 1.4;
+    margin-bottom: 5px;
+  }
+  .card-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--dgray);
+  }
+  .cat-tag {
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 10px;
+  }
+  .cat-tag.wr { background: var(--accent); color: var(--navy); }
+  .cat-tag.gp { background: var(--lgreen); color: var(--green); }
+  .cat-tag.wb { background: var(--lpurp); color: var(--purp); }
+ 
+  /* ── Detail modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 200;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(60px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    gap: 10px;
+  }
+  .modal-sku {
+    font-family: monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--navy);
+    background: var(--accent);
+    padding: 5px 12px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+  }
+  .close-btn {
+    background: var(--gray);
+    border: none;
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--dgray);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .modal-desc {
+    font-size: 14px;
+    color: #222;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--gray);
+    border-radius: 8px;
+  }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .info-box {
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  .info-box label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    opacity: 0.7;
+  }
+  .info-box .val {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .info-box.stock { background: var(--lgreen); color: var(--green); }
+  .info-box.opening{ background: var(--accent); color: var(--navy); }
+  .info-box.unit  { background: var(--lorng);  color: var(--orange); }
+  .info-box.cat   { background: var(--lpurp);  color: var(--purp); }
+ 
+  /* ── QR section ── */
+  .qr-section {
+    background: var(--gray);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .qr-section h3 {
+    font-size: 12px;
+    color: var(--dgray);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  #qr-container {
+    display: inline-block;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+  }
+  #qr-container canvas, #qr-container img { display: block; }
+  .qr-hint {
+    font-size: 11px;
+    color: var(--dgray);
+    line-height: 1.4;
+  }
+ 
+  /* ── QR Labels page ── */
+  .label-controls {
+    background: white;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .label-controls h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+  .label-controls .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-primary { background: var(--navy); color: white; }
+  .btn-green   { background: var(--green); color: white; }
+  .btn-purp    { background: var(--purp); color: white; }
+  .btn-print   { background: var(--orange); color: white; }
+ 
+  .labels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .label-card {
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .label-cat {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  .label-qr { margin: 6px auto; display: inline-block; }
+  .label-sku {
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--navy);
+    word-break: break-all;
+    margin-bottom: 4px;
+  }
+  .label-desc-short {
+    font-size: 9px;
+    color: var(--dgray);
+    line-height: 1.3;
+    max-height: 36px;
+    overflow: hidden;
+  }
+ 
+  /* ── Upload page ── */
+  .upload-area {
+    background: white;
+    border: 2px dashed var(--blue);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    margin-bottom: 16px;
+    cursor: pointer;
+  }
+  .upload-area .icon { font-size: 40px; margin-bottom: 10px; }
+  .upload-area h3 { font-size: 15px; color: var(--navy); margin-bottom: 6px; }
+  .upload-area p  { font-size: 12px; color: var(--dgray); line-height: 1.5; }
+  .upload-area input { display: none; }
+  .upload-status {
+    background: var(--lgreen);
+    color: var(--green);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: none;
+  }
+ 
+  /* ── Empty state ── */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--dgray);
+  }
+  .empty .icon { font-size: 40px; margin-bottom: 10px; }
+  .empty p { font-size: 14px; }
+ 
+  /* ── Print styles ── */
+  @media print {
+    header, .tabs, .page:not(#page-labels), .modal-overlay { display: none !important; }
+    #page-labels { display: block !important; padding: 0; }
+    .label-controls { display: none; }
+    .labels-grid {
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    .label-card { page-break-inside: avoid; }
+    body { background: white; }
+  }
+</style>
+</head>
+<body>
+ 
+<header>
+  <div class="logo">📦</div>
+  <div>
+    <h1>Stock Inventory Scanner</h1>
+    <p>Wire Rope · Green Pin · Webbing</p>
+  </div>
+  <div class="badge" id="item-count">167 Items</div>
+</header>
+ 
+<div class="tabs">
+  <div class="tab active" onclick="showPage('search', this)">🔍 Search</div>
+  <div class="tab" onclick="showPage('labels', this)">🏷️ Labels</div>
+  <div class="tab" onclick="showPage('upload', this)">📤 Update</div>
+</div>
+ 
+<!-- ══ SEARCH PAGE ══ -->
+<div class="page active" id="page-search">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Search SKU, description, code..." oninput="doSearch()">
+    <button class="clear-btn" id="clear-btn" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="filters">
+    <div class="chip all" onclick="filterCat('all', this)">All (167)</div>
+    <div class="chip wr inactive" onclick="filterCat('Wire Rope', this)">🔵 Wire Rope (91)</div>
+    <div class="chip gp inactive" onclick="filterCat('Green Pin', this)">🟢 Green Pin (61)</div>
+    <div class="chip wb inactive" onclick="filterCat('Webbing', this)">🟣 Webbing (15)</div>
+  </div>
+  <div class="results-info" id="results-info">Showing all 167 items</div>
+  <div id="items-list"></div>
+</div>
+ 
+<!-- ══ LABELS PAGE ══ -->
+<div class="page" id="page-labels">
+  <div class="label-controls">
+    <h3>🏷️ QR Code Labels — Print & Stick on Items</h3>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="genLabels('all')">All Items</button>
+      <button class="btn btn-green" onclick="genLabels('Wire Rope')">Wire Rope</button>
+      <button class="btn btn-green" onclick="genLabels('Green Pin')">Green Pin</button>
+      <button class="btn btn-purp" onclick="genLabels('Webbing')">Webbing</button>
+      <button class="btn btn-print" onclick="window.print()">🖨️ Print</button>
+    </div>
+  </div>
+  <div id="labels-grid" class="labels-grid"></div>
+</div>
+ 
+<!-- ══ UPLOAD PAGE ══ -->
+<div class="page" id="page-upload">
+  <div class="upload-area" onclick="document.getElementById('file-input').click()">
+    <div class="icon">📂</div>
+    <h3>Upload Updated Excel File</h3>
+    <p>When you update your Excel stock file, upload it here to refresh all items and QR codes automatically.</p>
+    <p style="margin-top:8px; font-size:11px; color:var(--blue);">Tap to select file → Stock_Inventory_System.xlsx</p>
+    <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleUpload(this)">
+  </div>
+  <div class="upload-status" id="upload-status">✅ File loaded successfully!</div>
+ 
+  <div style="background:white; border-radius:10px; padding:14px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+    <h3 style="font-size:13px; color:var(--navy); margin-bottom:10px; font-weight:700;">📋 How it works</h3>
+    <div style="font-size:12px; color:var(--dgray); line-height:1.8;">
+      <p>1️⃣ Update stock in your <b>Excel file</b> as usual (issues, POs, new items)</p>
+      <p>2️⃣ Come back here → Upload the updated Excel file</p>
+      <p>3️⃣ All 167 items refresh automatically with new data</p>
+      <p>4️⃣ New items get their QR codes generated instantly</p>
+      <p>5️⃣ Use the <b>Search tab</b> to scan or look up any item</p>
+    </div>
+  </div>
+ 
+  <div style="margin-top:14px; background:var(--lorng); border-radius:10px; padding:14px;">
+    <h3 style="font-size:12px; color:var(--orange); font-weight:700; margin-bottom:6px;">💡 Scanning Tip</h3>
+    <p style="font-size:12px; color:#555; line-height:1.6;">
+      Print the QR labels from the <b>Labels tab</b> and stick on each item.<br>
+      To scan: open your phone camera → point at QR code → it will search this app for the item automatically.
+    </p>
+  </div>
+</div>
+ 
+<!-- ══ DETAIL MODAL ══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-sku" id="m-sku"></div>
+      <button class="close-btn" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-desc" id="m-desc"></div>
+    <div class="info-grid">
+      <div class="info-box stock">
+        <label>Current Stock</label>
+        <div class="val" id="m-stock"></div>
+      </div>
+      <div class="info-box opening">
+        <label>Opening Qty</label>
+        <div class="val" id="m-opening"></div>
+      </div>
+      <div class="info-box unit">
+        <label>Unit</label>
+        <div class="val" id="m-unit"></div>
+      </div>
+      <div class="info-box cat">
+        <label>Category</label>
+        <div class="val" id="m-cat" style="font-size:13px;"></div>
+      </div>
+    </div>
+    <div class="qr-section">
+      <h3>📱 QR Code — Scan to find this item</h3>
+      <div id="qr-container"></div>
+      <div class="qr-hint">Point any phone camera at this QR code.<br>It will open this app and show item details.</div>
+    </div>
+  </div>
+</div>
+ 
+<script>
+// ══ DATA ══════════════════════════════════════════════════════
+const ITEMS_RAW = [{"sku": "WR-1-001", "category": "Wire Rope", "code": "10", "description": "ENDURANCE DYFORM 34LR 10MM DYFORM 34LR GAL 1960 RHLL MBL 9.4t", "unit": "m", "opening": 1000}, {"sku": "WR-2-002", "category": "Wire Rope", "code": "13", "description": "ENDURANCE DYFORM 34LR 13MM DYFORM 34LR GA 2160 RHLL MBL 16.7t WITH FUSED AND TAPERED ENDS", "unit": "m", "opening": 453}, {"sku": "WR-3-003", "category": "Wire Rope", "code": "14", "description": "14MM DYFORM 34LR GA 2160 RHLL MBL 19.3t", "unit": "m", "opening": 1}, {"sku": "WR-4-004", "category": "Wire Rope", "code": "15", "description": "ENDURANCE DYFORM 34LR 15MM DF 34LR BT 2160 RHLL MBF 215KN-PTB WITH FUSED ENDS", "unit": "m", "opening": 550}, {"sku": "WR-5-005", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 34LR GA 1960 RHLL MBL 24t", "unit": "m", "opening": 1}, {"sku": "WR-6-006", "category": "Wire Rope", "code": "16", "description": "16mm 6X36, Ungalvanized, IWRC, RHOL, 1960, MBL 179KN, EN12385/4/2002, LUBE:A2", "unit": "m", "opening": 2000}, {"sku": "WR-7-007", "category": "Wire Rope", "code": "16", "description": "16 mm 6 x36 IWRC 1960 GAL RHOL MBL179 KN BL1 CD 2-QR", "unit": "m", "opening": 1}, {"sku": "WR-8-008", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 34LR GA 1960 RHLL MBL 24t WITH PLAIN ENDS", "unit": "m", "opening": 485}, {"sku": "WR-9-009", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 34LR GA 1960 RHLL MBL 24t", "unit": "m", "opening": 1750}, {"sku": "WR-10-010", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 34LR GA 1960 RHLL MBL 24t", "unit": "m", "opening": 1}, {"sku": "WR-11-011", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 6x36IWRC 1960 BT RHO MBL22.1", "unit": "m", "opening": 1}, {"sku": "WR-12-012", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 6x36IWRC 1960 BT RHO MBL22.1", "unit": "m", "opening": 1}, {"sku": "WR-13-013", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 6X36IWRC 1960 GAL RHO MBL21.", "unit": "m", "opening": 1}, {"sku": "WR-14-014", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 6X36IWRC 1960 GAL RHO MBL21.", "unit": "m", "opening": 1}, {"sku": "WR-15-015", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 6X36IWRC 1960 GAL RHO MBL21.", "unit": "m", "opening": 1}, {"sku": "WR-16-016", "category": "Wire Rope", "code": "16", "description": "16MM DYFORM 6x36 IWRC 1960 GAL LHO 21.6", "unit": "m", "opening": 1}, {"sku": "WR-17-017", "category": "Wire Rope", "code": "18", "description": "18mm 6X36, Ungalvanized, IWRC, RHOL, 1960, MBL 226KN, EN12385/4/2002, LUBE:A2", "unit": "m", "opening": 2000}, {"sku": "WR-18-018", "category": "Wire Rope", "code": "18", "description": "18MM DYFORM 34LR GA 1960 RHLL MBL 30.4t", "unit": "m", "opening": 1}, {"sku": "WR-19-019", "category": "Wire Rope", "code": "18", "description": "BRIDON ENDURANCE DYFORM 6  18MM DYFORM 6X36 IWRC 1960 GAL RHO MBL28 WITH PLAIN ENDS", "unit": "m", "opening": 155}, {"sku": "WR-20-020", "category": "Wire Rope", "code": "18", "description": "18mm FC 6x36 1770 RHO Galvanized MBL 189 KN", "unit": "m", "opening": 2000}, {"sku": "WR-21-021", "category": "Wire Rope", "code": "18", "description": "18 mm 6 x36 IWRC 1960 GAL RHOL MBL 226 KN BL1 CD 2-QR", "unit": "m", "opening": 1}, {"sku": "WR-22-022", "category": "Wire Rope", "code": "18", "description": "18MM DYFORM 34LR GA 1960 RHLL MBL 30.6t", "unit": "m", "opening": 1}, {"sku": "WR-23-023", "category": "Wire Rope", "code": "18", "description": "18MM DYFORM 34LR GA 1960 RHLL MBL 30.4t", "unit": "m", "opening": 1}, {"sku": "WR-24-024", "category": "Wire Rope", "code": "18", "description": "18MM DYFORM 6X36 IWRC 1960 BT RHO MBL28t", "unit": "m", "opening": 1}, {"sku": "WR-25-025", "category": "Wire Rope", "code": "19", "description": "19MM 6x36 IWRC GAL 1960 RHO MBL 25.7T-FC", "unit": "m", "opening": 1}, {"sku": "WR-26-026", "category": "Wire Rope", "code": "19", "description": "19MM DYFORM 6x36IWRC 1960 GAL RHO MBL30.", "unit": "m", "opening": 1}, {"sku": "WR-27-027", "category": "Wire Rope", "code": "19", "description": "19MM 6x36 IWRC GAL 1960 RHO MBL 25.7T", "unit": "m", "opening": 1}, {"sku": "WR-28-028", "category": "Wire Rope", "code": "19", "description": "3/4\" 9X40 CONSTRUCTEX BT RRL MBL 33.1t", "unit": "m", "opening": 1}, {"sku": "WR-29-029", "category": "Wire Rope", "code": "19", "description": "3/4\" DYFORM 34LR 34X7 WSC GAL 2160 RHLL", "unit": "m", "opening": 1}, {"sku": "WR-30-030", "category": "Wire Rope", "code": "19", "description": "19MM DYFORM 34LR BT 2160 RHLL MBL 35.6t", "unit": "m", "opening": 255}, {"sku": "WR-31-031", "category": "Wire Rope", "code": "20", "description": "20mm 6X36, Ungalvanized, IWRC, RHOL, 1960, MBL 279KN, EN12385/4/2002, LUBE:A2", "unit": "m", "opening": 1250}, {"sku": "WR-32-032", "category": "Wire Rope", "code": "20", "description": "Bridon Dyform 34LR Rotation Resistant Wire rope 20mm 34*7 (S) WSC 1960 BRT RHL MBL 37.5 Tons", "unit": "m", "opening": 4}, {"sku": "WR-33-033", "category": "Wire Rope", "code": "20", "description": "20 mm 6 x36 IWRC 1960 GAL RHOL MBL 279 KN BL1 CD 2-QR", "unit": "m", "opening": 1}, {"sku": "WR-34-034", "category": "Wire Rope", "code": "20", "description": "wire rope 20mm 50 DP 26x7 WSC 1960 Gal RHL MBL31.6 C/W fused ends", "unit": "m", "opening": 1020}, {"sku": "WR-35-035", "category": "Wire Rope", "code": "22", "description": "22mm 6x36 Bridon Dyform 6 High performance Wire rope 6*36 (WS) IWRC 1960 BRT RHO MBL 40.9 Tons", "unit": "m", "opening": 1}, {"sku": "WR-36-036", "category": "Wire Rope", "code": "22", "description": "22MM DYFORM 8X26PI 1960 GAL RHOL", "unit": "m", "opening": 1}, {"sku": "WR-37-037", "category": "Wire Rope", "code": "22", "description": "22MM DYFORM 34LR 34X7 2160 LHL MBL 49.1", "unit": "m", "opening": 1}, {"sku": "WR-38-038", "category": "Wire Rope", "code": "22", "description": "BRIDON ENDURANCE DYFORM 34LR UNGALVANISED HIGH PERFORMANCE NON-ROTATING WIRE 22MM DF 34LR 34X7(S) WSC 2260 BT LHLL MBL 49.1T", "unit": "m", "opening": 1}, {"sku": "WR-39-039", "category": "Wire Rope", "code": "22", "description": "BRIDON ENDURANCE DYFORM 34LR COMPACTED UNGALVANISED HIGH PERFORMANCE NON-ROTATING WIRE 22MM DF 34LR 34X7(S) WSC 2260 BT LHLL MBL 49.1T", "unit": "m", "opening": 1}, {"sku": "WR-40-040", "category": "Wire Rope", "code": "24", "description": "Bridon Dyform 34LR Rotation Resistant Wire rope 24mm 34*7 (S) WSC 1960 BRT RHL MBL 54.1 Tons", "unit": "m", "opening": 1}, {"sku": "WR-41-041", "category": "Wire Rope", "code": "24", "description": "BR24DY34LR1960 Bridon Dyform 34LR Rotation Resistant Wire rope 24mm 34*7 (S) WSC 1960 BRT RHL MBL 54.1 Tons", "unit": "m", "opening": 1}, {"sku": "WR-42-042", "category": "Wire Rope", "code": "24", "description": "24MM DYFORM 6X36 IWRC 1960 GAL RHO 49.7", "unit": "m", "opening": 1}, {"sku": "WR-43-043", "category": "Wire Rope", "code": "24", "description": "24MM DYFORM 6X36 IWRC 1960 GAL RHO 49.6", "unit": "m", "opening": 1}, {"sku": "WR-44-044", "category": "Wire Rope", "code": "24", "description": "24MM DYFORM 6X36 IWRC 1960 GAL RHO 49.6", "unit": "m", "opening": 1}, {"sku": "WR-45-045", "category": "Wire Rope", "code": "24", "description": "24MM DYFORM 6X36 IWRC 1960 GAL RHO 49.6", "unit": "m", "opening": 1}, {"sku": "WR-46-046", "category": "Wire Rope", "code": "24", "description": "24MM DYFORM 6X36 IWRC 1960 GAL RHO 49.6", "unit": "m", "opening": 1}, {"sku": "WR-47-047", "category": "Wire Rope", "code": "24", "description": "24MM 50DB 26X7 1960 WSC GAL RHL RHL 45.4", "unit": "m", "opening": 1}, {"sku": "WR-48-048", "category": "Wire Rope", "code": "24", "description": "24MM 50DB 26X7 1960 WSC GAL RHL RHL 45.4", "unit": "m", "opening": 1}, {"sku": "WR-49-049", "category": "Wire Rope", "code": "24", "description": "24MM DYFORM 34LR PI GAL 1960 RHL MBL: 528 kN WITH FUSED AND TAPERED ENDS", "unit": "m", "opening": 1}, {"sku": "WR-50-050", "category": "Wire Rope", "code": "25", "description": "25MM DYFORM 6X36 IWRC GAL LHO MBL 52.2T", "unit": "m", "opening": 1}, {"sku": "WR-51-051", "category": "Wire Rope", "code": "1\"", "description": "ENDURANCE DYFORM 34LR 1\" DYFORM 34LR 34X7 2160 GAL RHL 63.8t WITH FUSED ENDS", "unit": "m", "opening": 58}, {"sku": "WR-52-052", "category": "Wire Rope", "code": "1\"", "description": "ENDURANCE DYFORM 34LR 1\" DYFORM 34LR 34X7 2160 GAL RHL 63.8t WITH FUSED ENDS", "unit": "m", "opening": 10}, {"sku": "WR-53-053", "category": "Wire Rope", "code": "25.4", "description": "ENDURANCE DYFORM 34LR MAX 25.4MM DF 34LRMAX UNG RHL MBL=76.9US WITH FUSED ENDS", "unit": "m", "opening": 8}, {"sku": "WR-54-054", "category": "Wire Rope", "code": "25.4", "description": "ENDURANCE DYFORM 34LR MAX 25.4MM DF 34LRMAX UNG RHL MBL=76.9US WITH FUSED ENDS", "unit": "m", "opening": 32}, {"sku": "WR-55-055", "category": "Wire Rope", "code": "25.4", "description": "ENDURANCE DYFORM 34LR MAX 25.4MM DF 34LRMAX UNG RHL MBL=76.9US WITH FUSED ENDS", "unit": "m", "opening": 6}, {"sku": "WR-56-056", "category": "Wire Rope", "code": "26", "description": "26MM DYFORM 34LR BT MAX RHLL MBL 71.9t", "unit": "m", "opening": 1}, {"sku": "WR-57-057", "category": "Wire Rope", "code": "26", "description": "26MM DYFORM 34LR BT MAX RHLL MBL 71.9t", "unit": "m", "opening": 0}, {"sku": "WR-58-058", "category": "Wire Rope", "code": "26", "description": "26MM 6X36 IWRC 1960 UNG LHO 48.1 BP", "unit": "m", "opening": 1}, {"sku": "WR-59-059", "category": "Wire Rope", "code": "26", "description": "ENDURANCE DYFORM 8 BRISTAR 26MM DF 8X26B* 1960 GAL RHO MBL 596KN WITH PLAIN ENDS", "unit": "m", "opening": 243}, {"sku": "WR-60-060", "category": "Wire Rope", "code": "26", "description": "1\" DYFORM 8x26 PI 2160 RHLL MBL 62", "unit": "m", "opening": 83}, {"sku": "WR-61-061", "category": "Wire Rope", "code": "26", "description": "1\" DYFORM 34LR MAX BT 2160 RHLL MBL 69.8", "unit": "m", "opening": 1}, {"sku": "WR-62-062", "category": "Wire Rope", "code": "26", "description": "1\" DYFORM 34LR MAX BT 2160 RHLL MBL 69.8", "unit": "m", "opening": 1}, {"sku": "WR-63-063", "category": "Wire Rope", "code": "26", "description": "26MM DYFORM 34LR GAL 1960 RHLL MBL 63.5t", "unit": "m", "opening": 1}, {"sku": "WR-64-064", "category": "Wire Rope", "code": "26", "description": "26MM 6X36 WIRC 1960 BRT RHO", "unit": "m", "opening": 1}, {"sku": "WR-65-065", "category": "Wire Rope", "code": "26", "description": "1\" DYFORM 34LR 34X7 WSC BRT 2160 RHLL", "unit": "m", "opening": 1}, {"sku": "WR-66-066", "category": "Wire Rope", "code": "26", "description": "1\" DF 34LR 34X7 2160 GAL RHL 63.8t- BHZ", "unit": "m", "opening": 38}, {"sku": "WR-67-067", "category": "Wire Rope", "code": "28", "description": "Bridon Dyform 34LR Rotation Resistant Wire rope 28mm 34*7 (S) WSC 2160 BRT RHL MBL 76.5 Tons", "unit": "m", "opening": 1}, {"sku": "WR-68-068", "category": "Wire Rope", "code": "28", "description": "Bridon Dyform 34LR Rotation Resistant Wire rope 28mm 34*7 (S) WSC 1960 BRT RHL MBL 73.60 Tons", "unit": "m", "opening": 1}, {"sku": "WR-69-069", "category": "Wire Rope", "code": "28", "description": "Bridon Dyform 34LR Rotation Resistant Wire rope 28mm 34*7 (S) WSC 1960 BRT RHL MBL 73.60 Tons", "unit": "m", "opening": 2}, {"sku": "WR-70-070", "category": "Wire Rope", "code": "28", "description": "28MM DYFORM 34LR 34X7 WSC GAL 1960 RHLL", "unit": "m", "opening": 1}, {"sku": "WR-71-071", "category": "Wire Rope", "code": "28", "description": "28MM 6X36 IWRC BRT 2160 RHO (HEAVY BLUE)", "unit": "m", "opening": 1}, {"sku": "WR-72-072", "category": "Wire Rope", "code": "29", "description": "29MM DYFORM 34LR XL BT 2160 RHLL MBL 78.", "unit": "m", "opening": 1}, {"sku": "WR-73-073", "category": "Wire Rope", "code": "28", "description": "28MM DYFORM6 iwrc BRT 1960 RHOL 66.2 MBL TON", "unit": "m", "opening": 0}, {"sku": "WR-74-074", "category": "Wire Rope", "code": "29", "description": "29MM DYFORM 34LR XL BT 2160 RHLL MBL 78.", "unit": "m", "opening": 1}, {"sku": "WR-75-075", "category": "Wire Rope", "code": "29", "description": "1.1/8\" 9X40 CONSTRUCTEX BT RRL MBL 72.1t", "unit": "m", "opening": 1}, {"sku": "WR-76-076", "category": "Wire Rope", "code": "29", "description": "1.1/8\" DYFORM 6X31 IWRC 1960 BRT RHO", "unit": "m", "opening": 1}, {"sku": "WR-77-077", "category": "Wire Rope", "code": "30", "description": "30MM DF34LR 1960 UNGAL RHL MBL=84.5T", "unit": "m", "opening": 1}, {"sku": "WR-78-078", "category": "Wire Rope", "code": "30", "description": "30 MM DYFORM6 iwrc BRT 1960 RHOL 66.2 MBF 821KN", "unit": "m", "opening": 1}, {"sku": "WR-79-079", "category": "Wire Rope", "code": "30", "description": "30MM DYFORM 34LR GA 1960 RHLL MBL 84.5t", "unit": "m", "opening": 1}, {"sku": "WR-80-080", "category": "Wire Rope", "code": "30", "description": "30MM 6X36 WIRC 1960 BRT RHO", "unit": "m", "opening": 1}, {"sku": "WR-81-081", "category": "Wire Rope", "code": "30", "description": "ENDURANCE DYFORM 34LR MAX 30MM3%DF34LR PIMAX 1960G RL 896KN BL20C6 WITH FUSED ENDS", "unit": "m", "opening": 500}, {"sku": "WR-82-082", "category": "Wire Rope", "code": "30", "description": "BRIDON ENDURANCE DYFORM 34LR PI HIGH PERFORMANCE CRANE WIRE ROPE 30MM DYFORM 34LR PI 19G0 GAL RHL MBL 823KN C/W FUSED & TAPERED ENDS", "unit": "m", "opening": 1}, {"sku": "WR-83-083", "category": "Wire Rope", "code": "32", "description": "32MM DF 34LR GA 1960 RHLL MBL 95.85t-PTB", "unit": "m", "opening": 109}, {"sku": "WR-84-084", "category": "Wire Rope", "code": "32", "description": "32MM DF 34LR 34X7 GA 1960 RHL 95.8T- BHZ", "unit": "m", "opening": 105}, {"sku": "WR-85-085", "category": "Wire Rope", "code": "32", "description": "32MM 6X36 IWRC BRT RHO 1960 MBL 72.9t", "unit": "m", "opening": 1}, {"sku": "WR-86-086", "category": "Wire Rope", "code": "32", "description": "32MM DYFORM 34LR GA 1960 RHLL MBL 95.85t", "unit": "m", "opening": 40}, {"sku": "WR-87-087", "category": "Wire Rope", "code": "32", "description": "1.1/4\" 6x19 IWRC 1960 RHO BRT(DL BHZ)", "unit": "m", "opening": 1}, {"sku": "WR-88-088", "category": "Wire Rope", "code": "34", "description": "34MM DYFORM 34LR GA 1960 RHLL MBL 108t", "unit": "m", "opening": 4}, {"sku": "WR-89-089", "category": "Wire Rope", "code": "36", "description": "36MM DYFORM 34LR GA 1960 RHLL MBL 121t", "unit": "m", "opening": 1}, {"sku": "WR-90-090", "category": "Wire Rope", "code": "36", "description": "36MM DYFORM 34LR GA 1960 RHLL MBL 121t", "unit": "m", "opening": 1}, {"sku": "WR-91-091", "category": "Wire Rope", "code": "36", "description": "36MM DYFORM 34LR GAL 1960 RHLL MBL 121 B", "unit": "m", "opening": 1}, {"sku": "SSGPOO3218", "category": "Green Pin", "code": "SSGPOO3218", "description": "Turnbuckle with eye-eye 1-1/4'' MBL=6.9", "unit": "pcs", "opening": 2}, {"sku": "SSGPGO1918", "category": "Green Pin", "code": "SSGPGO1918", "description": "Turnbuckle with jaw-eye 3/4'' with safety bolt MBL=2.36", "unit": "pcs", "opening": 2}, {"sku": "SSGPGO1606", "category": "Green Pin", "code": "SSGPGO1606", "description": "Turnbuckle with jaw-eye 5/8'' with safety bolt MBL=1.59", "unit": "pcs", "opening": 13}, {"sku": "SSGPGG1206", "category": "Green Pin", "code": "SSGPGG1206", "description": "Turnbuckle with jaw-jaw and safety bolt 1/2'' MBL=1", "unit": "pcs", "opening": 2}, {"sku": "OHOBZD010", "category": "Green Pin", "code": "OHOBZD010", "description": "Eye bolts, generally to DIN580 (M10*1.5) mm MBL=0.23", "unit": "pcs", "opening": 9}, {"sku": "OHOBGD036", "category": "Green Pin", "code": "OHOBGD036", "description": "Eye bolts, generally to DIN580 (M 36*4.00) MBL=4.6", "unit": "pcs", "opening": 10}, {"sku": "OHOBGD030", "category": "Green Pin", "code": "OHOBGD030", "description": "Eye bolts, generally to DIN580 (M 30*3.5) mm MBL=3.2", "unit": "pcs", "opening": 10}, {"sku": "OHOBGD027", "category": "Green Pin", "code": "OHOBGD027", "description": "Eye bolts, generally to DIN580 (M 27*3.00) mm MBL=2.5", "unit": "pcs", "opening": 10}, {"sku": "OHOBGD024", "category": "Green Pin", "code": "OHOBGD024", "description": "Eye bolts, generally to DIN580 (M 24*3.00) mm MBL=1.8", "unit": "pcs", "opening": 6}, {"sku": "OHOBGD022", "category": "Green Pin", "code": "OHOBGD022", "description": "Eye bolts, generally to DIN580 (M 22*2.5) mm MBL=1.5", "unit": "pcs", "opening": 8}, {"sku": "OHOBGD020", "category": "Green Pin", "code": "OHOBGD020", "description": "Eye bolts, generally to DIN580 (M 20*2.5) mm MBL=1.2", "unit": "pcs", "opening": 6}, {"sku": "OHOBGD018", "category": "Green Pin", "code": "OHOBGD018", "description": "Eye bolts, generally to DIN580 (M 18*2.5) mm MBL=0.9", "unit": "pcs", "opening": 1}, {"sku": "OHOBGD016", "category": "Green Pin", "code": "OHOBGD016", "description": "Eye bolts, generally to DIN580 (M 16*2.00) mm MBL=0.7", "unit": "pcs", "opening": 1}, {"sku": "OHOBGD012", "category": "Green Pin", "code": "OHOBGD012", "description": "Eye bolts, generally to DIN580 (M 12*1.75) mm MBL=0.34", "unit": "pcs", "opening": 13}, {"sku": "KCUS3220", "category": "Green Pin", "code": "KCUS3220", "description": "Thimbles, US.spec FF-T-276 tybe III rope 7/8'' (22mm) groove 15/16''", "unit": "pcs", "opening": 50}, {"sku": "KCUS3190", "category": "Green Pin", "code": "KCUS3190", "description": "Thimbles, US.spec FF-T-276 tybe III rope 3/4'' (19mm) groove 25/32''", "unit": "pcs", "opening": 50}, {"sku": "KCUS3160", "category": "Green Pin", "code": "KCUS3160", "description": "Thimbles, US.spec FF-T-276 tybe III rope 5/8'' (16mm) groove 21/32''", "unit": "pcs", "opening": 50}, {"sku": "KCPRF200", "category": "Green Pin", "code": "KCPRF200", "description": "Thimbles, heavy duty stub-end, hot dipped galvanized, diameter rope (20 mm)", "unit": "pcs", "opening": 50}, {"sku": "KCPNT260", "category": "Green Pin", "code": "KCPNT260", "description": "Thimbles, standard commercial, electro-galvanized, diameter rope (26 mm)", "unit": "pcs", "opening": 40}, {"sku": "KCPNT200", "category": "Green Pin", "code": "KCPNT200", "description": "Thimbles, standard commercial, electro-galvanized, diameter rope (20 mm)", "unit": "pcs", "opening": 75}, {"sku": "KCPNT180", "category": "Green Pin", "code": "KCPNT180", "description": "Thimbles, standard commercial, electro-galvanized, diameter rope (18 mm)", "unit": "pcs", "opening": 119}, {"sku": "GPUMJ20", "category": "Green Pin", "code": "GPUMJ20", "description": "Connecting link (GR10) 3/4'' (20) mm MBL=16", "unit": "pcs", "opening": 5}, {"sku": "GPUMJ16", "category": "Green Pin", "code": "GPUMJ16", "description": "Connecting link (GR10) 5/8'' (16) mm MBL=10.3", "unit": "pcs", "opening": 5}, {"sku": "GPGHMB65", "category": "Green Pin", "code": "GPGHMB65", "description": "Bow shackle with safety bolt 2 1/2'' MBL=55", "unit": "pcs", "opening": 5}, {"sku": "GPGHMB50", "category": "Green Pin", "code": "GPGHMB50", "description": "Bow shackle with safety bolt 2'' MBL=35", "unit": "pcs", "opening": 15}, {"sku": "GPGHMB45", "category": "Green Pin", "code": "GPGHMB45", "description": "Bow shackle with safety bolt 1 3/4'' MBL=25", "unit": "pcs", "opening": 15}, {"sku": "GPGHMB38", "category": "Green Pin", "code": "GPGHMB38", "description": "Bow shackle with safety bolt 1 1/2'' MBL=17", "unit": "pcs", "opening": 13}, {"sku": "GPGHMB32", "category": "Green Pin", "code": "GPGHMB32", "description": "Bow shackle with safety bolt 1 1/4'' MBL=12", "unit": "pcs", "opening": 9}, {"sku": "GPGHMB25", "category": "Green Pin", "code": "GPGHMB25", "description": "Bow shackle with safety bolt 1'' MBL=8.5", "unit": "pcs", "opening": 20}, {"sku": "GPGHMB22", "category": "Green Pin", "code": "GPGHMB22", "description": "Bow shackle with safety bolt 7/8'' MBL=6.5", "unit": "pcs", "opening": 29}, {"sku": "GPGHMB19", "category": "Green Pin", "code": "GPGHMB19", "description": "Bow Shackle with safety 19 mm MBL=4.75", "unit": "pcs", "opening": 49}, {"sku": "GPGHMB16", "category": "Green Pin", "code": "GPGHMB16", "description": "Bow shackle with safety bolt 5/8'' MBL=3.25", "unit": "pcs", "opening": 38}, {"sku": "GPGHMB13", "category": "Green Pin", "code": "GPGHMB13", "description": "Bow Shackle with safety 13.5 mm MBL=2", "unit": "pcs", "opening": 7}, {"sku": "GPGHMB10", "category": "Green Pin", "code": "GPGHMB10", "description": "Bow Shackle with safety 10 mm MBL=1", "unit": "pcs", "opening": 50}, {"sku": "GPGHBB16", "category": "Green Pin", "code": "GPGHBB16", "description": "Bow shackle with screw pin 7/16'' MBL=3.25", "unit": "pcs", "opening": 56}, {"sku": "GPGHBB11", "category": "Green Pin", "code": "GPGHBB11", "description": "Green Pin Bow Shackle SC 11mm WLL 1.5t", "unit": "pcs", "opening": 5}, {"sku": "GPGHBB08", "category": "Green Pin", "code": "GPGHBB08", "description": "Green Pin Bow Shackle SC 9mm WLL 0.75t", "unit": "pcs", "opening": 10}, {"sku": "GPGHBB05", "category": "Green Pin", "code": "GPGHBB05", "description": "Green Pin Bow Shackle SC 5mm WLL 0.33t", "unit": "pcs", "opening": 5}, {"sku": "GPGDBB19", "category": "Green Pin", "code": "GPGDBB19", "description": "Dee shackle with screw pin 3/4'' MBL=4.75", "unit": "pcs", "opening": 8}, {"sku": "GPGDBB13", "category": "Green Pin", "code": "GPGDBB13", "description": "Dee shackle with screw pin 1/2'' MBL=2", "unit": "pcs", "opening": 7}, {"sku": "GPGDBB11", "category": "Green Pin", "code": "GPGDBB11", "description": "Dee shackle with screw pin 7/16'' MBL=1.5", "unit": "pcs", "opening": 90}, {"sku": "GPGDBB10", "category": "Green Pin", "code": "GPGDBB10", "description": "Dee shackle with screw pin 3/8'' MBL=1", "unit": "pcs", "opening": 21}, {"sku": "GPGDBB08", "category": "Green Pin", "code": "GPGDBB08", "description": "Dee shackle with screw pin 5/16'' MBL=0.75", "unit": "pcs", "opening": 69}, {"sku": "GPGDBB06", "category": "Green Pin", "code": "GPGDBB06", "description": "Dee shackle with screw pin 1/4'' MBL=0.5", "unit": "pcs", "opening": 94}, {"sku": "GPAL18DIN", "category": "Green Pin", "code": "GPAL18DIN", "description": "Lifting eye DIN580 (18M*2.5) MBL=2", "unit": "pcs", "opening": 8}, {"sku": "GPAL16UNC", "category": "Green Pin", "code": "GPAL16UNC", "description": "Lifting eye GR8 unc 5/8'' MBL=1.5", "unit": "pcs", "opening": 5}, {"sku": "GPAL14DIN", "category": "Green Pin", "code": "GPAL14DIN", "description": "Lifting eye DIN580 (14M*2.00) MBL=1.2", "unit": "pcs", "opening": 8}, {"sku": "GPAL12RDIN", "category": "Green Pin", "code": "GPAL12RDIN", "description": "Lifting eye DIN580 (12M*1.75) MBL=1", "unit": "pcs", "opening": 8}, {"sku": "GPAL10DIN", "category": "Green Pin", "code": "GPAL10DIN", "description": "Lifting eye DIN580 (10M*1.50) MBL=0.7", "unit": "pcs", "opening": 9}, {"sku": "AS300", "category": "Green Pin", "code": "AS300", "description": "Aluminium wire rope sleeves 30mm", "unit": "pcs", "opening": 25}, {"sku": "AS260", "category": "Green Pin", "code": "AS260", "description": "Aluminium wire rope sleeves 26mm", "unit": "pcs", "opening": 55}, {"sku": "AS240", "category": "Green Pin", "code": "AS240", "description": "Aluminium wire rope sleeves 24mm", "unit": "pcs", "opening": 46}, {"sku": "AS200", "category": "Green Pin", "code": "AS200", "description": "Aluminium wire rope sleeves 20mm", "unit": "pcs", "opening": 38}, {"sku": "AS180", "category": "Green Pin", "code": "AS180", "description": "Aluminium wire rope sleeves 18mm", "unit": "pcs", "opening": 268}, {"sku": "AS160", "category": "Green Pin", "code": "AS160", "description": "Aluminium wire rope sleeves 16mm", "unit": "pcs", "opening": 176}, {"sku": "AS140", "category": "Green Pin", "code": "AS140", "description": "Aluminium wire rope sleeves 14mm", "unit": "pcs", "opening": 97}, {"sku": "AS120", "category": "Green Pin", "code": "AS120", "description": "Aluminium wire rope sleeves 12mm", "unit": "pcs", "opening": 98}, {"sku": "AL22RUNC", "category": "Green Pin", "code": "AL22RUNC", "description": "Lifting eye GR8 unc red 7/8'' MBL=3", "unit": "pcs", "opening": 3}, {"sku": "AL16R", "category": "Green Pin", "code": "AL16R", "description": "Eye bolt GR8 red 16mm MBL=1.5", "unit": "pcs", "opening": 2}, {"sku": "CLGRP03", "category": "Green Pin", "code": "CLGRP03", "description": "Wire rope clip 1mm", "unit": "pcs", "opening": 2}, {"sku": "CLGRP06", "category": "Green Pin", "code": "CLGRP06", "description": "Wire rope clip 1/4mm", "unit": "pcs", "opening": 2}, {"sku": "WB-1-001", "category": "Webbing", "code": "", "description": "2\"x4m 2Ply 7:1 Polyester Webbing Sling WLL-2MT", "unit": "pcs", "opening": 10}, {"sku": "WB-2-002", "category": "Webbing", "code": "", "description": "3\"x4m 2Ply 7:1 Polyester Webbing Sling WLL-3MT", "unit": "pcs", "opening": 8}, {"sku": "WB-3-003", "category": "Webbing", "code": "", "description": "4\"x4m 2Ply 7:1 Polyester Webbing Sling WLL-4MT", "unit": "pcs", "opening": 10}, {"sku": "WB-4-004", "category": "Webbing", "code": "", "description": "5\"x4m 2Ply 7:1 Polyester Webbing Sling WLL-5MT", "unit": "pcs", "opening": 5}, {"sku": "WB-5-005", "category": "Webbing", "code": "", "description": "2\"x6m 2Ply 7:1 Polyester Webbing Sling WLL-2MT", "unit": "pcs", "opening": 9}, {"sku": "WB-6-006", "category": "Webbing", "code": "", "description": "3\"x6m 2Ply 7:1 Polyester Webbing Sling WLL-3MT", "unit": "pcs", "opening": 10}, {"sku": "WB-7-007", "category": "Webbing", "code": "", "description": "4\"x6m 2Ply 7:1 Polyester Webbing Sling WLL-4MT", "unit": "pcs", "opening": 10}, {"sku": "WB-8-008", "category": "Webbing", "code": "", "description": "5\"x6m 2Ply 7:1 Polyester Webbing Sling WLL-5MT", "unit": "pcs", "opening": 5}, {"sku": "WB-9-009", "category": "Webbing", "code": "", "description": "2\"x8m 2Ply 7:1 Polyester Webbing Sling WLL-2MT", "unit": "pcs", "opening": 10}, {"sku": "WB-10-010", "category": "Webbing", "code": "", "description": "3\"x8m 2Ply 7:1 Polyester Webbing Sling WLL-3MT", "unit": "pcs", "opening": 10}, {"sku": "WB-11-011", "category": "Webbing", "code": "", "description": "4\"x8m 2Ply 7:1 Polyester Webbing Sling WLL-4MT", "unit": "pcs", "opening": 10}, {"sku": "WB-12-012", "category": "Webbing", "code": "", "description": "5\"x8m 2Ply 7:1 Polyester Webbing Sling WLL-5MT", "unit": "pcs", "opening": 5}, {"sku": "WB-13-013", "category": "Webbing", "code": "", "description": "3\"x6ft 3Ply 7:1 Polyester Webbing Sling WLL-4.5MT", "unit": "pcs", "opening": 5}, {"sku": "WB-14-014", "category": "Webbing", "code": "", "description": "2\"x12ft 4Ply 7:1 Polyester Webbing Sling", "unit": "pcs", "opening": 5}, {"sku": "WB-15-015", "category": "Webbing", "code": "", "description": "2\"x12ft 4Ply 7:1 Polyester Webbing Sling WLL-4MT", "unit": "pcs", "opening": 5}];
+ 
+let items = ITEMS_RAW.map(i => ({...i, stock: i.opening}));
+let filtered = [...items];
+let currentCat = 'all';
+ 
+// ── Helpers ──────────────────────────────────────────────────
+function catClass(cat) {
+  if (cat === 'Wire Rope') return 'wr';
+  if (cat === 'Green Pin') return 'gp';
+  return 'wb';
+}
+ 
+function stockClass(qty) {
+  if (qty <= 0) return 'empty';
+  if (qty <= 5) return 'low';
+  return 'ok';
+}
+ 
+function stockLabel(qty, unit) {
+  if (qty <= 0) return `0 ${unit} ⚠`;
+  return `${qty} ${unit}`;
+}
+ 
+// ── Render items list ─────────────────────────────────────────
+function renderList(data) {
+  const el = document.getElementById('items-list');
+  const info = document.getElementById('results-info');
+  info.textContent = `Showing ${data.length} of ${items.length} items`;
+  if (!data.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">🔍</div><p>No items match your search.</p></div>`;
+    return;
+  }
+  el.innerHTML = data.map(item => `
+    <div class="item-card ${catClass(item.category)}" onclick="openModal('${item.sku}')">
+      <div class="card-top">
+        <span class="sku-badge">${item.sku}</span>
+        <span class="stock-pill ${stockClass(item.stock)}">${stockLabel(item.stock, item.unit)}</span>
+      </div>
+      <div class="card-desc">${item.description.substring(0,100)}${item.description.length>100?'…':''}</div>
+      <div class="card-meta">
+        <span class="cat-tag ${catClass(item.category)}">${item.category}</span>
+        ${item.code ? `<span>Code: ${item.code}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+ 
+// ── Search ────────────────────────────────────────────────────
+function doSearch() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const btn = document.getElementById('clear-btn');
+  btn.classList.toggle('visible', q.length > 0);
+ 
+  let base = currentCat === 'all' ? items : items.filter(i => i.category === currentCat);
+  filtered = q ? base.filter(i =>
+    i.sku.toLowerCase().includes(q) ||
+    i.description.toLowerCase().includes(q) ||
+    i.code.toLowerCase().includes(q)
+  ) : base;
+  renderList(filtered);
+}
+ 
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('clear-btn').classList.remove('visible');
+  doSearch();
+}
+ 
+function filterCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.add('inactive');
+    c.classList.remove('all','wr','gp','wb');
+  });
+  el.classList.remove('inactive');
+  if (cat === 'all') el.classList.add('all');
+  else if (cat === 'Wire Rope') el.classList.add('wr');
+  else if (cat === 'Green Pin') el.classList.add('gp');
+  else el.classList.add('wb');
+  doSearch();
+}
+ 
+// ── Modal ─────────────────────────────────────────────────────
+let currentQR = null;
+ 
+function openModal(sku) {
+  const item = items.find(i => i.sku === sku);
+  if (!item) return;
+ 
+  document.getElementById('m-sku').textContent = item.sku;
+  document.getElementById('m-desc').textContent = item.description;
+  document.getElementById('m-stock').textContent = `${item.stock} ${item.unit}`;
+  document.getElementById('m-opening').textContent = `${item.opening} ${item.unit}`;
+  document.getElementById('m-unit').textContent = item.unit;
+  document.getElementById('m-cat').textContent = item.category;
+ 
+  // Generate QR
+  const qrDiv = document.getElementById('qr-container');
+  qrDiv.innerHTML = '';
+  new QRCode(qrDiv, {
+    text: item.sku,
+    width: 160, height: 160,
+    colorDark: '#1F4E79',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+ 
+  document.getElementById('modal-overlay').classList.add('open');
+}
+ 
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+ 
+// ── Labels page ───────────────────────────────────────────────
+let labelsGenerated = false;
+ 
+function genLabels(cat) {
+  const data = cat === 'all' ? items : items.filter(i => i.category === cat);
+  const grid = document.getElementById('labels-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#888;font-size:13px;">⏳ Generating QR codes...</div>';
+ 
+  setTimeout(() => {
+    grid.innerHTML = '';
+    data.forEach((item, idx) => {
+      const card = document.createElement('div');
+      card.className = 'label-card';
+      const tagColor = item.category === 'Wire Rope' ? '#2E75B6' :
+                       item.category === 'Green Pin' ? '#375623' : '#7030A0';
+      const tagBg = item.category === 'Wire Rope' ? '#BDD7EE' :
+                    item.category === 'Green Pin' ? '#E2EFDA' : '#EAD7F7';
+ 
+      card.innerHTML = `
+        <div class="label-cat" style="background:${tagBg};color:${tagColor}">${item.category}</div>
+        <div class="label-qr" id="lqr-${idx}"></div>
+        <div class="label-sku">${item.sku}</div>
+        <div class="label-desc-short">${item.description.substring(0,60)}${item.description.length>60?'…':''}</div>
+      `;
+      grid.appendChild(card);
+ 
+      setTimeout(() => {
+        new QRCode(document.getElementById(`lqr-${idx}`), {
+          text: item.sku,
+          width: 80, height: 80,
+          colorDark: tagColor,
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      }, idx * 5);
+    });
+  }, 50);
+}
+ 
+// ── Upload handler ────────────────────────────────────────────
+function handleUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  // Show success (in real implementation, would parse XLSX)
+  const status = document.getElementById('upload-status');
+  status.style.display = 'block';
+  status.textContent = `✅ "${file.name}" loaded! In the full version, items would refresh from this file.`;
+  setTimeout(() => status.style.display = 'none', 4000);
+}
+ 
+// ── Pages ─────────────────────────────────────────────────────
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  tab.classList.add('active');
+ 
+  if (id === 'labels' && !labelsGenerated) {
+    genLabels('all');
+    labelsGenerated = true;
+  }
+}
+ 
+// ── Init ──────────────────────────────────────────────────────
+renderList(items);
+</script>
+</body>
+</html>
